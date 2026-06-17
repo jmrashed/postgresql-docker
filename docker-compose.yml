@@ -19,7 +19,7 @@ services:
     environment:
       # PostgreSQL superuser credentials (used for initialization only)
       POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-K7mP2nL9rQ4vX8jB5hT0sW3cE6dF1gI}
       # Initialization options
       POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=pg_stat_statements"
       # Locale settings for consistency across deployments
@@ -27,15 +27,15 @@ services:
       # TZ environment variable for consistent timezone
       TZ: ${TZ:-UTC}
       # Database names and credentials (used by init scripts)
-      DB1_NAME: ${DB1_NAME:-db1}
-      DB1_USER: ${DB1_USER:-user1}
-      DB1_PASSWORD: ${DB1_PASSWORD:-pass1}
-      DB2_NAME: ${DB2_NAME:-db2}
-      DB2_USER: ${DB2_USER:-user2}
-      DB2_PASSWORD: ${DB2_PASSWORD:-pass2}
-      DB3_NAME: ${DB3_NAME:-db3}
-      DB3_USER: ${DB3_USER:-user3}
-      DB3_PASSWORD: ${DB3_PASSWORD:-pass3}
+      DB1_NAME: ${DB1_NAME:-crm_db}
+      DB1_USER: ${DB1_USER:-crm_app}
+      DB1_PASSWORD: ${DB1_PASSWORD:-C9kR2nM7pL5vQ8jB3hX4sT0cW6dE1fG}
+      DB2_NAME: ${DB2_NAME:-inventory_db}
+      DB2_USER: ${DB2_USER:-inventory_app}
+      DB2_PASSWORD: ${DB2_PASSWORD:-I4mP9qL2nO6vR3jB5hT8sW0cX7dE1fK}
+      DB3_NAME: ${DB3_NAME:-hr_db}
+      DB3_USER: ${DB3_USER:-hr_app}
+      DB3_PASSWORD: ${DB3_PASSWORD:-H6rL1nE3pM9vK4jB7sT5cW0dX2fG8jQ}
     
     # Port mapping: Host:Container
     # Expose PostgreSQL on default port 5432
@@ -95,7 +95,7 @@ services:
     environment:
       # Default admin login credentials
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-P8gA2dM5nI9vL1rE4vX6sT0cQ3wK7bJ}
       # Disable pgAdmin's password policy (dev/test only - remove for production)
       PGADMIN_CONFIG_ENHANCED_PASSWORD_FIELDS: "False"
       PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 10
