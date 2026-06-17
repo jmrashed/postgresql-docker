@@ -266,21 +266,21 @@ Python:      psycopg2.connect(database='hr_db', user='hr_app', password='H6rL1nE
 
 ```bash
 # Test DB1 access as user1
-docker-compose exec postgres psql -U user1 -d db1 -c "SELECT * FROM customers LIMIT 2;"
+docker-CRM Database
+docker-compose exec postgres psql -U crm_app -d crm_db -c "SELECT * FROM customers LIMIT 2;"
 
-# Test DB2 access as user2
-docker-compose exec postgres psql -U user2 -d db2 -c "SELECT * FROM products LIMIT 2;"
+# Test Inventory Database
+docker-compose exec postgres psql -U inventory_app -d inventory_db -c "SELECT * FROM products LIMIT 2;"
 
-# Test DB3 access as user3
-docker-compose exec postgres psql -U user3 -d db3 -c "SELECT * FROM employees LIMIT 2;"
+# Test HR Database
+docker-compose exec postgres psql -U hr_app -d hr_db -c "SELECT * FROM employees LIMIT 2;"
 ```
 
 ### Verify Access Control (Isolation)
 
 ```bash
-# This should FAIL - user1 cannot access db2
-docker-compose exec postgres psql -U user1 -d db2 -c "SELECT 1;" 2>&1
-
+# This should FAIL - crm_app cannot access inventory_db
+docker-compose exec postgres psql -U crm_app -d inventory_db
 # Expected error:
 # psql: error: FATAL: permission denied for database "db2"
 ```
