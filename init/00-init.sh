@@ -5,40 +5,9 @@
 # ============================================================================
 # This script orchestrates the initialization of multiple databases with
 # sample data. It's executed automatically by PostgreSQL during first startup.
-#
-# Execution order:
-# 1. 01-create-db.sql (in postgres database)
-# 2. 02-create-users.sql (in postgres database)
-# 3. 03-grants.sql (in postgres database)
-# 4. 10-db1-sample.sql (in DB1_NAME database)
-# 5. 20-db2-sample.sql (in DB2_NAME database)
-# 6. 30-db3-sample.sql (in DB3_NAME database)
 
 set -e  # Exit on any error
 set -u  # Exit on undefined variable
-
-# ============================================================================
-# Verify required environment variables
-# ============================================================================
-required_vars=(
-    "DB1_NAME" "DB1_USER" "DB1_PASSWORD"
-    "DB2_NAME" "DB2_USER" "DB2_PASSWORD"
-    "DB3_NAME" "DB3_USER" "DB3_PASSWORD"
-    "POSTGRES_USER" "POSTGRES_PASSWORD"
-)
-
-missing_vars=()
-for var in "${required_vars[@]}"; do
-    if [[ -z "${!var:-}" ]]; then
-        missing_vars+=("$var")
-    fi
-done
-
-if [[ ${#missing_vars[@]} -gt 0 ]]; then
-    echo "ERROR: Missing required environment variables:"
-    printf '  - %s\n' "${missing_vars[@]}"
-    exit 1
-fi
 
 echo ""
 echo "=========================================="
@@ -52,58 +21,265 @@ echo "  3. $DB3_NAME (user: $DB3_USER)"
 echo ""
 
 # ============================================================================
-# Execute initialization scripts in correct order and databases
-# ============================================================================
-
-# Function to run SQL with environment variable substitution
-run_sql_in_db() {
-    local db_name=$1
-    local sql_file=$2
-    
-    echo "Executing: $(basename $sql_file) in database '$db_name'"
-    
-    psql \
-        -v DB1_NAME="$DB1_NAME" \
-        -v DB1_USER="$DB1_USER" \
-        -v DB1_PASSWORD="$DB1_PASSWORD" \
-        -v DB2_NAME="$DB2_NAME" \
-        -v DB2_USER="$DB2_USER" \
-        -v DB2_PASSWORD="$DB2_PASSWORD" \
-        -v DB3_NAME="$DB3_NAME" \
-        -v DB3_USER="$DB3_USER" \
-        -v DB3_PASSWORD="$DB3_PASSWORD" \
-        -d "$db_name" \
-        -f "$sql_file"
-}
-
-# ============================================================================
-# Step 1-3: Database, User, and Permission Setup (in postgres database)
+# Create databases first
 # ============================================================================
 echo "Step 1: Creating databases..."
-run_sql_in_db "postgres" "/docker-entrypoint-initdb.d/01-create-db.sql"
 
-echo ""
-echo "Step 2: Creating users..."
-run_sql_in_db "postgres" "/docker-entrypoint-initdb.d/02-create-users.sql"
+psql -d postgres << EOF
+CREATE DATABASE $DB1_NAME;
+CREATE DATABASE $DB2_NAME;
+CREATE DATABASE $DB3_NAME;
+EOF
 
-echo ""
-echo "Step 3: Granting permissions..."
-run_sql_in_db "postgres" "/docker-entrypoint-initdb.d/03-grants.sql"
+echo "Databases created"
 
 # ============================================================================
-# Step 10-30: Sample Data (in respective databases)
+# Create users with passwords
+# ============================================================================
+echo ""
+echo "Step 2: Creating users..."
+
+psql -d postgres << EOF
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DB1_USER') THEN
+    EXECUTE 'CREATE ROLE $DB1_USER WITH LOGIN ENCRYPTED PASSWORD ''$DB1_PASSWORD''';
+  ELSE
+    EXECUTE 'ALTER ROLE $DB1_USER WITH ENCRYPTED PASSWORD ''$DB1_PASSWORD''';
+  END IF;
+END \$\$;
+
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DB2_USER') THEN
+    EXECUTE 'CREATE ROLE $DB2_USER WITH LOGIN ENCRYPTED PASSWORD ''$DB2_PASSWORD''';
+  ELSE
+    EXECUTE 'ALTER ROLE $DB2_USER WITH ENCRYPTED PASSWORD ''$DB2_PASSWORD''';
+  END IF;
+END \$\$;
+
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DB3_USER') THEN
+    EXECUTE 'CREATE ROLE $DB3_USER WITH LOGIN ENCRYPTED PASSWORD ''$DB3_PASSWORD''';
+  ELSE
+    EXECUTE 'ALTER ROLE $DB3_USER WITH ENCRYPTED PASSWORD ''$DB3_PASSWORD''';
+  END IF;
+END \$\$;
+EOF
+
+echo "Users created"
+
+# ============================================================================
+# Grant permissions and set ownership
+# ============================================================================
+echo ""
+echo "Step 3: Granting permissions..."
+
+psql -d postgres << EOF
+GRANT ALL PRIVILEGES ON DATABASE $DB1_NAME TO $DB1_USER;
+GRANT CONNECT ON DATABASE $DB1_NAME TO $DB1_USER;
+ALTER DATABASE $DB1_NAME OWNER TO $DB1_USER;
+
+GRANT ALL PRIVILEGES ON DATABASE $DB2_NAME TO $DB2_USER;
+GRANT CONNECT ON DATABASE $DB2_NAME TO $DB2_USER;
+ALTER DATABASE $DB2_NAME OWNER TO $DB2_USER;
+
+GRANT ALL PRIVILEGES ON DATABASE $DB3_NAME TO $DB3_USER;
+GRANT CONNECT ON DATABASE $DB3_NAME TO $DB3_USER;
+ALTER DATABASE $DB3_NAME OWNER TO $DB3_USER;
+
+REVOKE ALL PRIVILEGES ON DATABASE $DB1_NAME FROM PUBLIC;
+REVOKE CONNECT ON DATABASE $DB1_NAME FROM PUBLIC;
+REVOKE ALL PRIVILEGES ON DATABASE $DB2_NAME FROM PUBLIC;
+REVOKE CONNECT ON DATABASE $DB2_NAME FROM PUBLIC;
+REVOKE ALL PRIVILEGES ON DATABASE $DB3_NAME FROM PUBLIC;
+REVOKE CONNECT ON DATABASE $DB3_NAME FROM PUBLIC;
+EOF
+
+# Also grant and alter table ownership for existing tables
+# (tables created by postgres need explicit ownership change)
+psql -d "$DB1_NAME" << EOF
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB1_USER;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB1_USER;
+ALTER TABLE IF EXISTS customers OWNER TO $DB1_USER;
+ALTER TABLE IF EXISTS orders OWNER TO $DB1_USER;
+EOF
+
+psql -d "$DB2_NAME" << EOF
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB2_USER;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB2_USER;
+ALTER TABLE IF EXISTS products OWNER TO $DB2_USER;
+ALTER TABLE IF EXISTS inventory_logs OWNER TO $DB2_USER;
+EOF
+
+psql -d "$DB3_NAME" << EOF
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB3_USER;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB3_USER;
+ALTER TABLE IF EXISTS departments OWNER TO $DB3_USER;
+ALTER TABLE IF EXISTS employees OWNER TO $DB3_USER;
+EOF
+
+echo "Permissions granted"
+
+# ============================================================================
+# Sample Data for Database 1
 # ============================================================================
 echo ""
 echo "Step 10: Loading sample data into Database 1..."
-run_sql_in_db "$DB1_NAME" "/docker-entrypoint-initdb.d/10-db1-sample.sql"
 
+psql -d "$DB1_NAME" << 'SQLEOF'
+CREATE TABLE IF NOT EXISTS customers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    amount DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO customers (name, email, phone) VALUES
+    ('John Smith', 'john.smith@example.com', '+1-555-0001'),
+    ('Sarah Johnson', 'sarah.johnson@example.com', '+1-555-0002'),
+    ('Michael Chen', 'michael.chen@example.com', '+1-555-0003'),
+    ('Emma Wilson', 'emma.wilson@example.com', '+1-555-0004'),
+    ('Robert Brown', 'robert.brown@example.com', '+1-555-0005'),
+    ('Lisa Anderson', 'lisa.anderson@example.com', '+1-555-0006')
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO orders (customer_id, amount, status) VALUES
+    (1, 149.99, 'completed'),
+    (1, 299.50, 'completed'),
+    (2, 75.00, 'processing'),
+    (3, 599.99, 'completed'),
+    (4, 199.99, 'pending'),
+    (5, 450.00, 'completed'),
+    (6, 99.99, 'completed'),
+    (2, 249.75, 'completed'),
+    (3, 125.50, 'processing'),
+    (1, 399.99, 'pending')
+ON CONFLICT DO NOTHING;
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB1_USER;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB1_USER;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO $DB1_USER;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO $DB1_USER;
+EOF
+
+echo "Database 1 sample data loaded"
+
+# ============================================================================
+# Sample Data for Database 2
+# ============================================================================
 echo ""
 echo "Step 20: Loading sample data into Database 2..."
-run_sql_in_db "$DB2_NAME" "/docker-entrypoint-initdb.d/20-db2-sample.sql"
 
+psql -d "$DB2_NAME" << 'SQLEOF'
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    stock INTEGER NOT NULL DEFAULT 0,
+    sku VARCHAR(50) UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS inventory_logs (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    change_qty INTEGER NOT NULL,
+    reason VARCHAR(100) NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO products (name, description, price, stock, sku) VALUES
+    ('Wireless Keyboard', 'Mechanical gaming keyboard', 129.99, 45, 'KBD-001'),
+    ('USB-C Mouse', 'Ergonomic wireless mouse', 49.99, 120, 'MSE-001'),
+    ('4K Monitor', '27-inch 4K UHD monitor', 599.99, 8, 'MON-001'),
+    ('Laptop Stand', 'Adjustable aluminum stand', 39.99, 200, 'STA-001'),
+    ('HDMI Cable', '6 feet HDMI 2.1', 19.99, 500, 'CAB-001'),
+    ('USB Hub', '7-port USB 3.1 hub', 89.99, 35, 'HUB-001'),
+    ('LED Desk Lamp', 'Smart LED desk lamp', 59.99, 65, 'LAM-001'),
+    ('Webcam 1080p', 'Full HD webcam', 79.99, 28, 'CAM-001')
+ON CONFLICT (sku) DO NOTHING;
+
+INSERT INTO inventory_logs (product_id, change_qty, reason, notes) VALUES
+    (1, 50, 'purchase', 'Initial stock'),
+    (2, 150, 'purchase', 'Bulk order'),
+    (1, -5, 'sale', 'Sold to customer'),
+    (3, -2, 'sale', 'Sold to corporate'),
+    (1, -3, 'damage', 'Damaged units')
+ON CONFLICT DO NOTHING;
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB2_USER;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB2_USER;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO $DB2_USER;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO $DB2_USER;
+EOF
+
+echo "Database 2 sample data loaded"
+
+# ============================================================================
+# Sample Data for Database 3
+# ============================================================================
 echo ""
 echo "Step 30: Loading sample data into Database 3..."
-run_sql_in_db "$DB3_NAME" "/docker-entrypoint-initdb.d/30-db3-sample.sql"
+
+psql -d "$DB3_NAME" << 'SQLEOF'
+CREATE TABLE IF NOT EXISTS departments (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    budget DECIMAL(12, 2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS employees (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    role VARCHAR(100) NOT NULL,
+    salary DECIMAL(10, 2) NOT NULL,
+    department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+    joined_date DATE NOT NULL,
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO departments (name, description, budget) VALUES
+    ('Engineering', 'Software development', 500000.00),
+    ('Sales', 'Customer acquisition', 300000.00),
+    ('Marketing', 'Brand generation', 200000.00),
+    ('Human Resources', 'HR and recruitment', 150000.00),
+    ('Finance', 'Financial planning', 180000.00)
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO employees (name, email, role, salary, department_id, joined_date, status) VALUES
+    ('Alice Johnson', 'alice.johnson@company.com', 'Senior Engineer', 120000.00, 1, '2020-01-15', 'active'),
+    ('Bob Williams', 'bob.williams@company.com', 'Software Engineer', 95000.00, 1, '2021-03-20', 'active'),
+    ('Diana Martinez', 'diana.martinez@company.com', 'Sales Manager', 105000.00, 2, '2020-09-01', 'active')
+ON CONFLICT (email) DO NOTHING;
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB3_USER;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB3_USER;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO $DB3_USER;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO $DB3_USER;
+EOF
+
+echo "Database 3 sample data loaded"
 
 # ============================================================================
 # Optional: Import custom SQL files
@@ -114,8 +290,7 @@ if [[ -d "/docker-entrypoint-initdb.d/custom" ]]; then
     for custom_sql in /docker-entrypoint-initdb.d/custom/*.sql; do
         if [[ -f "$custom_sql" ]]; then
             filename=$(basename "$custom_sql")
-            # Skip placeholder/documentation files
-            if [[ "$filename" == "*.md" ]] || [[ "$filename" == PLACEHOLDER* ]]; then
+            if [[ "$filename" == *.md ]] || [[ "$filename" == PLACEHOLDER* ]]; then
                 continue
             fi
             echo "  - Importing: $filename"
@@ -129,9 +304,6 @@ if [[ -d "/docker-entrypoint-initdb.d/custom" ]]; then
     done
 fi
 
-# ============================================================================
-# Completion message
-# ============================================================================
 echo ""
 echo "=========================================="
 echo "✓ All initialization steps completed!"

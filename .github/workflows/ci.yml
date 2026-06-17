@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint (shellcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run shellcheck
+        run: |
+          shellcheck setup.sh verify-setup.sh init/00-init.sh pgadmin/setup-pgpass.sh
+
+  integration:
+    name: Integration (docker compose + verify-setup.sh)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start environment via setup.sh
+        run: |
+          chmod +x setup.sh verify-setup.sh init/00-init.sh pgadmin/setup-pgpass.sh || true
+          ./setup.sh
+
+      - name: Verify
+        run: |
+          ./verify-setup.sh
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose down -v || docker-compose down -v || true
+
