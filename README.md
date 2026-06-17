@@ -1,5 +1,10 @@
 # PostgreSQL Multi-Database Development Environment with pgAdmin4
 
+[![Docker Pulls](https://img.shields.io/docker/pulls/postgres?label=Docker%20pulls)](https://hub.docker.com/_/postgres)
+[![GitHub Stars](https://img.shields.io/github/stars/jmrashed/postgresql-docker?style=social)](https://github.com/jmrashed/postgresql-docker/stargazers)
+[![GitHub License](https://img.shields.io/github/license/jmrashed/postgresql-docker)](https://github.com/jmrashed/postgresql-docker/blob/main/LICENSE)
+
+
 > **Zero-config PostgreSQL setup in seconds** - Perfect for developers, teams, and rapid prototyping. One command gets you production-ready databases with web-based administration.
 
 ## Why This Project?
