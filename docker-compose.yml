@@ -1,0 +1,165 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # PostgreSQL Service
+  # ============================================================================
+  postgres:
+    # Use official PostgreSQL image with Alpine Linux for smaller footprint
+    image: postgres:16-alpine
+    
+    # Container name for easy reference
+    container_name: postgresql-multi-db
+    
+    # Restart policy for automatic recovery
+    restart: unless-stopped
+    
+    # Environment variables for PostgreSQL initialization
+    # These are used by the official Docker image for initial setup
+    environment:
+      # PostgreSQL superuser credentials (used for initialization only)
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
+      # Initialization options
+      POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=pg_stat_statements"
+      # Locale settings for consistency across deployments
+      PGDATA: /var/lib/postgresql/data/pgdata
+      # TZ environment variable for consistent timezone
+      TZ: ${TZ:-UTC}
+      # Database names and credentials (used by init scripts)
+      DB1_NAME: ${DB1_NAME:-db1}
+      DB1_USER: ${DB1_USER:-user1}
+      DB1_PASSWORD: ${DB1_PASSWORD:-pass1}
+      DB2_NAME: ${DB2_NAME:-db2}
+      DB2_USER: ${DB2_USER:-user2}
+      DB2_PASSWORD: ${DB2_PASSWORD:-pass2}
+      DB3_NAME: ${DB3_NAME:-db3}
+      DB3_USER: ${DB3_USER:-user3}
+      DB3_PASSWORD: ${DB3_PASSWORD:-pass3}
+    
+    # Port mapping: Host:Container
+    # Expose PostgreSQL on default port 5432
+    ports:
+      - "5432:5432"
+    
+    # Volume mounts for data persistence and initialization scripts
+    volumes:
+      # Database data persistence
+      # Using named volume for better management and backups
+      - postgres_data:/var/lib/postgresql/data
+      
+      # Initialization scripts directory
+      # PostgreSQL automatically executes .sql and .sh files in this directory
+      # in alphabetical order during first container startup
+      - ./init:/docker-entrypoint-initdb.d
+    
+    # Healthcheck configuration
+    # Verifies that PostgreSQL is responsive and accepting connections
+    healthcheck:
+      # Command to check database connectivity
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER:-postgres} -d postgres"]
+      # Time to wait for the first check
+      start_period: 10s
+      # Time between health checks
+      interval: 10s
+      # Timeout for each health check
+      timeout: 5s
+      # Number of consecutive failures before marking as unhealthy
+      retries: 5
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Network configuration
+    networks:
+      - postgres_network
+
+  # ============================================================================
+  # pgAdmin4 Service - Web-based PostgreSQL Management Tool
+  # ============================================================================
+  pgadmin:
+    # Official pgAdmin4 container image
+    image: dpage/pgadmin4:latest
+    
+    # Container name for easy reference
+    container_name: pgadmin-multi-db
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Environment variables for pgAdmin configuration
+    environment:
+      # Default admin login credentials
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+      # Disable pgAdmin's password policy (dev/test only - remove for production)
+      PGADMIN_CONFIG_ENHANCED_PASSWORD_FIELDS: "False"
+      PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 10
+      # Prevent logging to file (optional)
+      PGADMIN_CONFIG_LOG_FILE: ""
+    
+    # Port mapping: Host:Container
+    # Expose pgAdmin on port 5050
+    ports:
+      - "5050:80"
+    
+    # Volume mounts
+    volumes:
+      # pgAdmin data persistence (configurations, preferences)
+      - pgadmin_data:/var/lib/pgadmin
+      
+      # Pre-configured server definitions
+      # This automatically registers PostgreSQL connections in pgAdmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      
+      # Pre-configured pgAdmin settings (optional)
+      - ./pgadmin/pgadmin4_config.py:/pgadmin4/pgadmin4_config.py:ro
+    
+    # Healthcheck configuration
+    healthcheck:
+      # Check if pgAdmin web server is responding
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/misc/ping"]
+      start_period: 15s
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Depends on PostgreSQL being ready before pgAdmin starts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    # Network configuration
+    networks:
+      - postgres_network
+
+# ============================================================================
+# Named volumes for data persistence
+# ============================================================================
+volumes:
+  postgres_data:
+    # Use local driver for simplicity
+    # For production, consider using a dedicated storage driver
+    driver: local
+  
+  pgadmin_data:
+    # pgAdmin configuration and preferences storage
+    driver: local
+
+# ============================================================================
+# Network configuration for container communication
+# ============================================================================
+networks:
+  postgres_network:
+    driver: bridge
