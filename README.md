@@ -19,9 +19,9 @@ When you run `docker-compose up -d`, this automatically:
 
 | Database | User | Password | Purpose | Tables |
 |----------|------|----------|---------|--------|
-| **db1** | user1 | pass1 | CRM System | customers, orders |
-| **db2** | user2 | pass2 | Inventory System | products, inventory_logs |
-| **db3** | user3 | pass3 | HR System | employees, departments |
+| **crm_db** | crm_app | C9kR2nM7pL5vQ8jB3hX4sT0cW6dE1fG | CRM System | customers, orders |
+| **inventory_db** | inventory_app | I4mP9qL2nO6vR3jB5hT8sW0cX7dE1fK | Inventory System | products, inventory_logs |
+| **hr_db** | hr_app | H6rL1nE3pM9vK4jB7sT5cW0dX2fG8jQ | HR System | employees, departments |
 
 ### Key Features
 
@@ -79,20 +79,20 @@ nano .env
 ⚠️ **Security**: Change default passwords before production use
 
 ```env
-DB1_NAME=db1
-DB1_USER=user1
-DB1_PASSWORD=your_secure_password_here
+DB1_NAME=crm_db
+DB1_USER=crm_app
+DB1_PASSWORD=C9kR2nM7pL5vQ8jB3hX4sT0cW6dE1fG
 
-DB2_NAME=db2
-DB2_USER=user2
-DB2_PASSWORD=your_secure_password_here
+DB2_NAME=inventory_db
+DB2_USER=inventory_app
+DB2_PASSWORD=I4mP9qL2nO6vR3jB5hT8sW0cX7dE1fK
 
-DB3_NAME=db3
-DB3_USER=user3
-DB3_PASSWORD=your_secure_password_here
+DB3_NAME=hr_db
+DB3_USER=hr_app
+DB3_PASSWORD=H6rL1nE3pM9vK4jB7sT5cW0dX2fG8jQ
 
 PGADMIN_DEFAULT_EMAIL=admin@example.com
-PGADMIN_DEFAULT_PASSWORD=admin123
+PGADMIN_DEFAULT_PASSWORD=P8gA2dM5nI9vL1rE4vX6sT0cQ3wK7bJ
 ```
 
 ### 4. Start All Services
@@ -123,7 +123,7 @@ pgadmin-multi-db              Up X minutes (healthy)
 
 ## 🗄️ Sample Data Overview
 
-### Database 1: CRM System (db1)
+### Database 1: CRM System (crm_db)
 
 **Tables:**
 - `customers` - Customer profiles with contact information
@@ -148,7 +148,7 @@ Orders:
    ...
 ```
 
-### Database 2: Inventory System (db2)
+### Database 2: Inventory System (inventory_db)
 
 **Tables:**
 - `products` - Product catalog with pricing and stock
@@ -173,7 +173,7 @@ Inventory Logs:
    ...
 ```
 
-### Database 3: HR System (db3)
+### Database 3: HR System (hr_db)
 
 **Tables:**
 - `departments` - Company departments
@@ -204,19 +204,19 @@ Employees:
 
 **Connection String:**
 ```
-postgresql://user1:pass1@localhost:5432/db1
+postgresql://crm_app:C9kR2nM7pL5vQ8jB3hX4sT0cW6dE1fG@localhost:5432/crm_db
 ```
 
 **Command Line:**
 ```bash
-# Database 1
-psql -h localhost -U user1 -d db1 -W
+# Database 1 (CRM)
+psql -h localhost -U crm_app -d crm_db -W
 
-# Database 2
-psql -h localhost -U user2 -d db2 -W
+# Database 2 (Inventory)
+psql -h localhost -U inventory_app -d inventory_db -W
 
-# Database 3
-psql -h localhost -U user3 -d db3 -W
+# Database 3 (HR)
+psql -h localhost -U hr_app -d hr_db -W
 
 # Superuser
 psql -h localhost -U postgres -W
@@ -226,39 +226,38 @@ psql -h localhost -U postgres -W
 
 - **URL**: [http://localhost:5050](http://localhost:5050)
 - **Email**: `admin@example.com` (or `$PGADMIN_DEFAULT_EMAIL`)
-- **Password**: `admin123` (or `$PGADMIN_DEFAULT_PASSWORD`)
+- **Password**: `P8gA2dM5nI9vL1rE4vX6sT0cQ3wK7bJ` (or `$PGADMIN_DEFAULT_PASSWORD`)
 
 **Pre-configured Connections:**
-- Database 1 (CRM) - user1
-- Database 2 (Inventory) - user2
-- Database 3 (HR) - user3
+- CRM Database (crm_db) - crm_app
+- Inventory Database (inventory_db) - inventory_app
+- HR Database (hr_db) - hr_app
 - Superuser Connection - postgres
 
 ## 📡 Connection Strings for Applications
 
 ### Database 1 (CRM)
 ```
-PostgreSQL:  postgresql://user1:pass1@localhost:5432/db1
-JDBC:        jdbc:postgresql://localhost:5432/db1?user=user1&password=pass1
-MongoDB URI: (not applicable)
-Node.js:     pg.Pool({host: 'localhost', database: 'db1', user: 'user1', password: 'pass1'})
-Python:      psycopg2.connect(database='db1', user='user1', password='pass1', host='localhost')
+PostgreSQL:  postgresql://crm_app:C9kR2nM7pL5vQ8jB3hX4sT0cW6dE1fG@localhost:5432/crm_db
+JDBC:        jdbc:postgresql://localhost:5432/crm_db?user=crm_app&password=C9kR2nM7pL5vQ8jB3hX4sT0cW6dE1fG
+Node.js:     pg.Pool({host: 'localhost', database: 'crm_db', user: 'crm_app', password: 'C9kR2nM7pL5vQ8jB3hX4sT0cW6dE1fG'})
+Python:      psycopg2.connect(database='crm_db', user='crm_app', password='C9kR2nM7pL5vQ8jB3hX4sT0cW6dE1fG', host='localhost')
 ```
 
 ### Database 2 (Inventory)
 ```
-PostgreSQL:  postgresql://user2:pass2@localhost:5432/db2
-JDBC:        jdbc:postgresql://localhost:5432/db2?user=user2&password=pass2
-Node.js:     pg.Pool({host: 'localhost', database: 'db2', user: 'user2', password: 'pass2'})
-Python:      psycopg2.connect(database='db2', user='user2', password='pass2', host='localhost')
+PostgreSQL:  postgresql://inventory_app:I4mP9qL2nO6vR3jB5hT8sW0cX7dE1fK@localhost:5432/inventory_db
+JDBC:        jdbc:postgresql://localhost:5432/inventory_db?user=inventory_app&password=I4mP9qL2nO6vR3jB5hT8sW0cX7dE1fK
+Node.js:     pg.Pool({host: 'localhost', database: 'inventory_db', user: 'inventory_app', password: 'I4mP9qL2nO6vR3jB5hT8sW0cX7dE1fK'})
+Python:      psycopg2.connect(database='inventory_db', user='inventory_app', password='I4mP9qL2nO6vR3jB5hT8sW0cX7dE1fK', host='localhost')
 ```
 
 ### Database 3 (HR)
 ```
-PostgreSQL:  postgresql://user3:pass3@localhost:5432/db3
-JDBC:        jdbc:postgresql://localhost:5432/db3?user=user3&password=pass3
-Node.js:     pg.Pool({host: 'localhost', database: 'db3', user: 'user3', password: 'pass3'})
-Python:      psycopg2.connect(database='db3', user='user3', password='pass3', host='localhost')
+PostgreSQL:  postgresql://hr_app:H6rL1nE3pM9vK4jB7sT5cW0dX2fG8jQ@localhost:5432/hr_db
+JDBC:        jdbc:postgresql://localhost:5432/hr_db?user=hr_app&password=H6rL1nE3pM9vK4jB7sT5cW0dX2fG8jQ
+Node.js:     pg.Pool({host: 'localhost', database: 'hr_db', user: 'hr_app', password: 'H6rL1nE3pM9vK4jB7sT5cW0dX2fG8jQ'})
+Python:      psycopg2.connect(database='hr_db', user='hr_app', password='H6rL1nE3pM9vK4jB7sT5cW0dX2fG8jQ', host='localhost')
 ```
 
 ## ✅ Verification Commands
