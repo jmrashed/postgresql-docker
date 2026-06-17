@@ -1,0 +1,57 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "CRM Database",
+      "Group": "Production Databases",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "crm_db",
+      "Username": "crm_app",
+      "PassFile": "/tmp/pgpassfile",
+      "SSLMode": "prefer",
+      "Comment": "CRM Database - Customers & Orders System",
+      "DBRestrictionList": [
+        "crm_db"
+      ]
+    },
+    "2": {
+      "Name": "Inventory Database",
+      "Group": "Production Databases",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "inventory_db",
+      "Username": "inventory_app",
+      "PassFile": "/tmp/pgpassfile",
+      "SSLMode": "prefer",
+      "Comment": "Inventory Database - Products & Stock Management",
+      "DBRestrictionList": [
+        "inventory_db"
+      ]
+    },
+    "3": {
+      "Name": "HR Database",
+      "Group": "Production Databases",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "hr_db",
+      "Username": "hr_app",
+      "PassFile": "/tmp/pgpassfile",
+      "SSLMode": "prefer",
+      "Comment": "HR Database - Employees & Departments Management",
+      "DBRestrictionList": [
+        "hr_db"
+      ]
+    },
+    "4": {
+      "Name": "PostgreSQL Admin",
+      "Group": "Production Databases",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "postgres",
+      "PassFile": "/tmp/pgpassfile",
+      "SSLMode": "prefer",
+      "Comment": "Superuser connection - administrative access only"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Backup files
+*.sql.backup
+*.sql.bak
+*.tar.gz
+*.zip
+
+# pgAdmin session files
+pgadmin4_server_mode.db*
+pgadmin4/
+pgpass
+
+# PostgreSQL temp files
+*.tmp
+
+# Docker volumes (for debugging - not typically committed)
+volumes/
+
+# OS specific
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Project specific
+*.log
+debug/
+temp/

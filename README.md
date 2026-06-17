@@ -1,1 +1,635 @@
-# postgresql-docker
+# PostgreSQL Multi-Database Development Environment with pgAdmin4
+
+Complete Docker Compose setup for a production-ready PostgreSQL development environment with pgAdmin4, automatic database creation, user setup, and sample data initialization.
+
+## 🎯 What You Get
+
+When you run `docker-compose up -d`, this automatically:
+
+✅ Starts PostgreSQL 16 (Alpine)  
+✅ Creates 3 isolated databases  
+✅ Creates 3 dedicated users with isolated permissions  
+✅ Loads sample data into each database  
+✅ Starts pgAdmin4 with pre-configured database connections  
+✅ Persists all data in Docker volumes  
+
+## 📋 Database Setup
+
+### Overview
+
+| Database | User | Password | Purpose | Tables |
+|----------|------|----------|---------|--------|
+| **db1** | user1 | pass1 | CRM System | customers, orders |
+| **db2** | user2 | pass2 | Inventory System | products, inventory_logs |
+| **db3** | user3 | pass3 | HR System | employees, departments |
+
+### Key Features
+
+- **Isolated Access**: Each user can ONLY access their own database
+- **No Cross-Database Access**: Database-level isolation enforced
+- **Sample Data**: Ready-to-use demo data in each database
+- **Idempotent Setup**: Safe to restart containers multiple times
+- **Full Privileges**: Each user has complete control over their database
+
+## 📁 Project Structure
+
+```
+postgresql-docker/
+├── docker-compose.yml              # Services configuration
+├── .env.example                    # Environment variables template
+├── .env                            # Local env (NOT in git)
+├── .gitignore                      # Git ignore rules
+├── README.md                       # This file
+├── init/                           # Database initialization scripts
+│   ├── 00-init.sh                 # Main orchestration script
+│   ├── 01-create-db.sql           # Create databases
+│   ├── 02-create-users.sql        # Create users
+│   ├── 03-grants.sql              # Set permissions
+│   ├── 10-db1-sample.sql          # Sample data: CRM
+│   ├── 20-db2-sample.sql          # Sample data: Inventory
+│   └── 30-db3-sample.sql          # Sample data: HR
+└── pgadmin/                        # pgAdmin configuration
+    ├── servers.json               # Pre-configured connections
+    └── setup-pgpass.sh            # Password file setup
+```
+
+## 🚀 Quick Start
+
+### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd postgresql-docker
+```
+
+### 2. Create Environment File
+
+```bash
+cp .env.example .env
+```
+
+### 3. (Optional) Customize Passwords
+
+Edit `.env` to change database names, usernames, or passwords:
+
+```bash
+nano .env
+```
+
+⚠️ **Security**: Change default passwords before production use
+
+```env
+DB1_NAME=db1
+DB1_USER=user1
+DB1_PASSWORD=your_secure_password_here
+
+DB2_NAME=db2
+DB2_USER=user2
+DB2_PASSWORD=your_secure_password_here
+
+DB3_NAME=db3
+DB3_USER=user3
+DB3_PASSWORD=your_secure_password_here
+
+PGADMIN_DEFAULT_EMAIL=admin@example.com
+PGADMIN_DEFAULT_PASSWORD=admin123
+```
+
+### 4. Start All Services
+
+```bash
+docker-compose up -d
+```
+
+### 5. Verify Setup
+
+```bash
+# Check container status
+docker-compose ps
+
+# View initialization logs
+docker-compose logs postgres
+
+# Verify pgAdmin is running
+curl http://localhost:5050
+```
+
+Expected output:
+```
+NAME                          STATUS
+postgresql-multi-db           Up X minutes (healthy)
+pgadmin-multi-db              Up X minutes (healthy)
+```
+
+## 🗄️ Sample Data Overview
+
+### Database 1: CRM System (db1)
+
+**Tables:**
+- `customers` - Customer profiles with contact information
+  - 6 sample records
+- `orders` - Customer orders with amounts and status
+  - 10 sample records
+
+**Sample Data:**
+```
+Customers:
+  id | name              | email                      | phone
+  ---|-------------------|----------------------------|----------
+   1 | John Smith        | john.smith@example.com    | +1-555-0001
+   2 | Sarah Johnson     | sarah.johnson@example.com | +1-555-0002
+   ...
+
+Orders:
+  id | customer_id | amount  | status      | created_at
+  ---|-------------|---------|-------------|------------------
+   1 |      1      | 149.99  | completed   | 2024-01-15
+   2 |      1      | 299.50  | completed   | 2024-01-16
+   ...
+```
+
+### Database 2: Inventory System (db2)
+
+**Tables:**
+- `products` - Product catalog with pricing and stock
+  - 8 sample records
+- `inventory_logs` - Stock movement history
+  - 15 sample records
+
+**Sample Data:**
+```
+Products:
+  id | name                | price    | stock | sku
+  ---|---------------------|----------|-------|--------
+   1 | Wireless Keyboard   | 129.99   | 45    | KBD-001
+   2 | USB-C Mouse         | 49.99    | 120   | MSE-001
+   ...
+
+Inventory Logs:
+  id | product_id | change_qty | reason        | created_at
+  ---|------------|-----------|---------------|------------------
+   1 |      1     |     50    | purchase      | 2024-01-01
+   2 |      2     |     150   | purchase      | 2024-01-02
+   ...
+```
+
+### Database 3: HR System (db3)
+
+**Tables:**
+- `departments` - Company departments
+  - 5 sample records
+- `employees` - Employee profiles with salaries
+  - 12 sample records
+
+**Sample Data:**
+```
+Departments:
+  id | name             | budget
+  ---|------------------|----------
+   1 | Engineering      | 500000.00
+   2 | Sales            | 300000.00
+   ...
+
+Employees:
+  id | name            | email                      | role            | salary    | dept_id
+  ---|-----------------|----------------------------|-----------------|-----------|--------
+   1 | Alice Johnson   | alice.johnson@company.com  | Senior Engineer | 120000.00 | 1
+   2 | Bob Williams    | bob.williams@company.com   | Software Engr   | 95000.00  | 1
+   ...
+```
+
+## 🌐 Access Points
+
+### PostgreSQL Direct Access
+
+**Connection String:**
+```
+postgresql://user1:pass1@localhost:5432/db1
+```
+
+**Command Line:**
+```bash
+# Database 1
+psql -h localhost -U user1 -d db1 -W
+
+# Database 2
+psql -h localhost -U user2 -d db2 -W
+
+# Database 3
+psql -h localhost -U user3 -d db3 -W
+
+# Superuser
+psql -h localhost -U postgres -W
+```
+
+### pgAdmin4 Web Interface
+
+- **URL**: [http://localhost:5050](http://localhost:5050)
+- **Email**: `admin@example.com` (or `$PGADMIN_DEFAULT_EMAIL`)
+- **Password**: `admin123` (or `$PGADMIN_DEFAULT_PASSWORD`)
+
+**Pre-configured Connections:**
+- Database 1 (CRM) - user1
+- Database 2 (Inventory) - user2
+- Database 3 (HR) - user3
+- Superuser Connection - postgres
+
+## 📡 Connection Strings for Applications
+
+### Database 1 (CRM)
+```
+PostgreSQL:  postgresql://user1:pass1@localhost:5432/db1
+JDBC:        jdbc:postgresql://localhost:5432/db1?user=user1&password=pass1
+MongoDB URI: (not applicable)
+Node.js:     pg.Pool({host: 'localhost', database: 'db1', user: 'user1', password: 'pass1'})
+Python:      psycopg2.connect(database='db1', user='user1', password='pass1', host='localhost')
+```
+
+### Database 2 (Inventory)
+```
+PostgreSQL:  postgresql://user2:pass2@localhost:5432/db2
+JDBC:        jdbc:postgresql://localhost:5432/db2?user=user2&password=pass2
+Node.js:     pg.Pool({host: 'localhost', database: 'db2', user: 'user2', password: 'pass2'})
+Python:      psycopg2.connect(database='db2', user='user2', password='pass2', host='localhost')
+```
+
+### Database 3 (HR)
+```
+PostgreSQL:  postgresql://user3:pass3@localhost:5432/db3
+JDBC:        jdbc:postgresql://localhost:5432/db3?user=user3&password=pass3
+Node.js:     pg.Pool({host: 'localhost', database: 'db3', user: 'user3', password: 'pass3'})
+Python:      psycopg2.connect(database='db3', user='user3', password='pass3', host='localhost')
+```
+
+## ✅ Verification Commands
+
+### Test Database Connectivity
+
+```bash
+# Test DB1 access as user1
+docker-compose exec postgres psql -U user1 -d db1 -c "SELECT * FROM customers LIMIT 2;"
+
+# Test DB2 access as user2
+docker-compose exec postgres psql -U user2 -d db2 -c "SELECT * FROM products LIMIT 2;"
+
+# Test DB3 access as user3
+docker-compose exec postgres psql -U user3 -d db3 -c "SELECT * FROM employees LIMIT 2;"
+```
+
+### Verify Access Control (Isolation)
+
+```bash
+# This should FAIL - user1 cannot access db2
+docker-compose exec postgres psql -U user1 -d db2 -c "SELECT 1;" 2>&1
+
+# Expected error:
+# psql: error: FATAL: permission denied for database "db2"
+```
+
+### View All Databases
+
+```bash
+docker-compose exec postgres psql -U postgres -c "\l"
+```
+
+### View All Users
+
+```bash
+docker-compose exec postgres psql -U postgres -c "\du"
+```
+
+### Check Table Counts
+
+```bash
+docker-compose exec postgres psql -U user1 -d db1 -c "SELECT COUNT(*) FROM customers; SELECT COUNT(*) FROM orders;"
+```
+
+## 📊 Useful SQL Queries
+
+### Database 1: CRM Analytics
+
+```sql
+-- Connect as user1 to db1
+psql -U user1 -d db1
+
+-- Total revenue by customer
+SELECT c.name, SUM(o.amount) as total_spent
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+GROUP BY c.id, c.name
+ORDER BY total_spent DESC;
+
+-- Orders by status
+SELECT status, COUNT(*) as count, SUM(amount) as total
+FROM orders
+GROUP BY status;
+```
+
+### Database 2: Inventory Analytics
+
+```sql
+-- Connect as user2 to db2
+psql -U user2 -d db2
+
+-- Stock levels
+SELECT id, name, price, stock, (price * stock) as inventory_value
+FROM products
+ORDER BY inventory_value DESC;
+
+-- Recent inventory movements
+SELECT p.name, il.change_qty, il.reason, il.created_at
+FROM inventory_logs il
+JOIN products p ON il.product_id = p.id
+ORDER BY il.created_at DESC
+LIMIT 10;
+```
+
+### Database 3: HR Analytics
+
+```sql
+-- Connect as user3 to db3
+psql -U user3 -d db3
+
+-- Employees by department with average salary
+SELECT d.name, COUNT(*) as count, AVG(e.salary) as avg_salary
+FROM employees e
+JOIN departments d ON e.department_id = d.id
+GROUP BY d.id, d.name;
+
+-- Highest paid employees
+SELECT name, role, salary
+FROM employees
+ORDER BY salary DESC
+LIMIT 10;
+```
+
+## 🔄 Common Operations
+
+### Connect Interactively
+
+```bash
+# Access Database 1 as user1
+docker-compose exec postgres psql -U user1 -d db1
+
+# Now run SQL commands in the REPL
+db1=> SELECT * FROM customers;
+db1=> \dt  -- list tables
+db1=> \q   -- quit
+```
+
+### Insert New Data
+
+```bash
+# Add a new customer to DB1
+docker-compose exec postgres psql -U user1 -d db1 << EOF
+INSERT INTO customers (name, email, phone) VALUES 
+  ('Jane Doe', 'jane.doe@example.com', '+1-555-0099');
+EOF
+```
+
+### Create New Table
+
+```bash
+# Create table in DB2
+docker-compose exec postgres psql -U user2 -d db2 << EOF
+CREATE TABLE warehouses (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    location VARCHAR(255),
+    capacity INTEGER
+);
+EOF
+```
+
+### Backup Database
+
+```bash
+# Backup DB1
+docker-compose exec postgres pg_dump -U user1 db1 > db1_backup.sql
+
+# Backup all databases
+docker-compose exec postgres pg_dumpall -U postgres > full_backup.sql
+```
+
+### Restore Database
+
+```bash
+# Restore DB1 from backup
+docker-compose exec -T postgres psql -U user1 -d db1 < db1_backup.sql
+```
+
+### View Database Size
+
+```bash
+docker-compose exec postgres psql -U postgres << EOF
+SELECT 
+    datname AS database,
+    pg_size_pretty(pg_database_size(datname)) AS size
+FROM pg_database 
+WHERE datname IN ('db1', 'db2', 'db3')
+ORDER BY pg_database_size(datname) DESC;
+EOF
+```
+
+## 🛑 Container Management
+
+### Stop Services (Keep Data)
+
+```bash
+docker-compose stop
+```
+
+### Start Services
+
+```bash
+docker-compose start
+```
+
+### Restart Services
+
+```bash
+docker-compose restart
+```
+
+### View Logs
+
+```bash
+# All services
+docker-compose logs
+
+# Follow logs in real-time
+docker-compose logs -f
+
+# Only PostgreSQL
+docker-compose logs postgres
+
+# Only pgAdmin
+docker-compose logs pgadmin
+
+# Last 50 lines
+docker-compose logs --tail 50
+```
+
+### Remove Containers (Keep Volumes/Data)
+
+```bash
+docker-compose down
+```
+
+### Remove Everything (⚠️ Deletes Data)
+
+```bash
+docker-compose down -v
+```
+
+## 🔐 Security Recommendations
+
+### 1. Change Default Passwords
+
+Before exposing to any network, update `.env`:
+```bash
+DB1_PASSWORD=`openssl rand -base64 32`
+DB2_PASSWORD=`openssl rand -base64 32`
+DB3_PASSWORD=`openssl rand -base64 32`
+PGADMIN_DEFAULT_PASSWORD=`openssl rand -base64 32`
+```
+
+### 2. Secure .env File
+
+```bash
+chmod 600 .env
+chmod 600 .env.example
+```
+
+### 3. Add to .gitignore
+
+```bash
+echo ".env" >> .gitignore
+echo ".env.local" >> .gitignore
+```
+
+### 4. Restrict Network Access
+
+Modify `docker-compose.yml` to only accept local connections:
+```yaml
+ports:
+  - "127.0.0.1:5432:5432"  # PostgreSQL localhost only
+  - "127.0.0.1:5050:80"    # pgAdmin localhost only
+```
+
+### 5. Use Environment Variables
+
+Store sensitive data in `.env`, never hardcode in files or commit to Git.
+
+### 6. Implement SSL/TLS
+
+For production, enable SSL connections to PostgreSQL:
+```yaml
+environment:
+  POSTGRES_INITDB_ARGS: "-c ssl=on"
+```
+
+### 7. Rotate Passwords Regularly
+
+Update passwords in `.env` and PostgreSQL:
+```bash
+docker-compose exec postgres psql -U postgres -c "ALTER USER user1 WITH PASSWORD 'new_password';"
+```
+
+## 🐛 Troubleshooting
+
+### Container Won't Start
+
+```bash
+# Check logs for errors
+docker-compose logs postgres
+
+# Common issues:
+# 1. Port 5432 already in use
+sudo lsof -i :5432
+
+# 2. Port 5050 already in use
+sudo lsof -i :5050
+
+# 3. Corrupted volume
+docker volume rm postgresql-docker_postgres_data
+docker-compose up -d  # Re-initializes data
+```
+
+### Can't Connect to Database
+
+```bash
+# Verify PostgreSQL is healthy
+docker-compose ps
+
+# Test connectivity
+docker-compose exec postgres pg_isready -U postgres
+
+# Check credentials in .env
+cat .env | grep DB1_PASSWORD
+```
+
+### pgAdmin Connection Failed
+
+```bash
+# Verify PostgreSQL hostname (should be "postgres" in docker network)
+docker network inspect postgresql-docker_postgres_network
+
+# Check pgAdmin logs
+docker-compose logs pgadmin
+
+# Restart pgAdmin
+docker-compose restart pgadmin
+```
+
+### Data Not Persisting After Restart
+
+```bash
+# Check volumes exist
+docker volume ls | grep postgresql
+
+# Verify volume mount in container
+docker inspect postgresql-multi-db | grep -A 5 "Mounts"
+```
+
+### High Memory Usage
+
+```bash
+# Check container resource usage
+docker stats
+
+# Limit resources in docker-compose.yml
+# See commented deploy section in docker-compose.yml
+```
+
+## 📚 Additional Resources
+
+- [PostgreSQL Official Documentation](https://www.postgresql.org/docs/)
+- [PostgreSQL Docker Image](https://hub.docker.com/_/postgres)
+- [pgAdmin4 Documentation](https://www.pgadmin.org/docs/)
+- [Docker Compose Reference](https://docs.docker.com/compose/compose-file/)
+- [PostgreSQL Security Best Practices](https://www.postgresql.org/docs/current/sql-syntax.html)
+
+## 🎓 Learning Path
+
+1. **Start**: Run `docker-compose up -d` and explore pgAdmin UI
+2. **Basic**: Connect with `psql` and run SELECT queries
+3. **Intermediate**: Create tables and insert data via SQL
+4. **Advanced**: Explore transactions, indexes, and performance
+5. **Production**: Implement backups, monitoring, and clustering
+
+## 📞 Support
+
+For issues or questions:
+
+1. Check the troubleshooting section above
+2. Review Docker Compose logs: `docker-compose logs`
+3. Verify environment variables: `cat .env`
+4. Consult PostgreSQL documentation: https://www.postgresql.org/docs/
+
+---
+
+**Last Updated**: 2026  
+**PostgreSQL Version**: 16 (Alpine)  
+**pgAdmin Version**: Latest  
+**Docker Compose Version**: 3.8+
