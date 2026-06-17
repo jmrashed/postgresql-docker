@@ -3,6 +3,10 @@
 .env.local
 .env.*.local
 
+# Custom SQL (user-provided - not part of repo)
+custom-sql/
+init/custom/
+
 # IDE
 .vscode/
 .idea/

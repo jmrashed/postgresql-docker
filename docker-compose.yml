@@ -42,7 +42,7 @@ services:
     ports:
       - "5432:5432"
     
-    # Volume mounts for data persistence and initialization scripts
+# Volume mounts for data persistence and initialization scripts
     volumes:
       # Database data persistence
       # Using named volume for better management and backups
@@ -51,7 +51,9 @@ services:
       # Initialization scripts directory
       # PostgreSQL automatically executes .sql and .sh files in this directory
       # in alphabetical order during first container startup
+      # Custom SQL files can be placed in init/custom/ for import
       - ./init:/docker-entrypoint-initdb.d
+      - ./init/custom:/docker-entrypoint-initdb.d/custom
     
     # Healthcheck configuration
     # Verifies that PostgreSQL is responsive and accepting connections
@@ -98,9 +100,6 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-P8gA2dM5nI9vL1rE4vX6sT0cQ3wK7bJ}
       # Disable pgAdmin's password policy (dev/test only - remove for production)
       PGADMIN_CONFIG_ENHANCED_PASSWORD_FIELDS: "False"
-      PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 10
-      # Prevent logging to file (optional)
-      PGADMIN_CONFIG_LOG_FILE: ""
     
     # Port mapping: Host:Container
     # Expose pgAdmin on port 5050
@@ -115,9 +114,6 @@ services:
       # Pre-configured server definitions
       # This automatically registers PostgreSQL connections in pgAdmin
       - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
-      
-      # Pre-configured pgAdmin settings (optional)
-      - ./pgadmin/pgadmin4_config.py:/pgadmin4/pgadmin4_config.py:ro
     
     # Healthcheck configuration
     healthcheck:

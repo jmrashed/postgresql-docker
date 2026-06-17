@@ -6,7 +6,18 @@
 # This script verifies that the Docker environment is correctly set up
 # and all databases, users, and sample data are properly initialized.
 
-set -e
+# Check if .env file exists and load it
+if [[ -f ".env" ]]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Set defaults if not set
+DB1_NAME=${DB1_NAME:-crm_db}
+DB2_NAME=${DB2_NAME:-inventory_db}
+DB3_NAME=${DB3_NAME:-hr_db}
+DB1_USER=${DB1_USER:-crm_app}
+DB2_USER=${DB2_USER:-inventory_app}
+DB3_USER=${DB3_USER:-hr_app}
 
 # Colors for output
 RED='\033[0;31m'
@@ -55,16 +66,22 @@ print_header "PostgreSQL Multi-Database Verification"
 
 # Check if docker-compose is available
 print_test "Docker Compose installed"
-if command -v docker-compose &> /dev/null; then
+if command -v docker-compose &> /dev/null || docker compose version &> /dev/null; then
     pass
 else
     fail "docker-compose not found in PATH"
     exit 1
 fi
 
+# Determine compose command
+COMPOSE_CMD="docker-compose"
+if ! command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+fi
+
 # Check if containers are running
 print_test "PostgreSQL container running"
-if docker-compose ps postgres | grep -q "Up"; then
+if $COMPOSE_CMD ps postgres | grep -q "Up"; then
     pass
 else
     fail "PostgreSQL container not running"
@@ -72,7 +89,7 @@ else
 fi
 
 print_test "pgAdmin container running"
-if docker-compose ps pgadmin | grep -q "Up"; then
+if $COMPOSE_CMD ps pgadmin | grep -q "Up"; then
     pass
 else
     fail "pgAdmin container not running"
@@ -81,7 +98,7 @@ fi
 
 # Check PostgreSQL connectivity
 print_test "PostgreSQL connectivity"
-if docker-compose exec -T postgres pg_isready -U postgres > /dev/null 2>&1; then
+if $COMPOSE_CMD exec -T postgres pg_isready -U postgres > /dev/null 2>&1; then
     pass
 else
     fail "Cannot connect to PostgreSQL"
@@ -95,27 +112,27 @@ fi
 print_header "Database & User Tests"
 
 # Test Database 1
-print_test "Database 1 (db1) exists"
-if docker-compose exec -T postgres psql -U postgres -lqt | cut -d \| -f 1 | grep -w db1 > /dev/null; then
+print_test "Database 1 (${DB1_NAME}) exists"
+if $COMPOSE_CMD exec -T postgres psql -U postgres -lqt | cut -d \| -f 1 | grep -w "$DB1_NAME" > /dev/null; then
     pass
 else
-    fail "Database 'db1' not found"
+    fail "Database '$DB1_NAME' not found"
 fi
 
 # Test Database 2
-print_test "Database 2 (db2) exists"
-if docker-compose exec -T postgres psql -U postgres -lqt | cut -d \| -f 1 | grep -w db2 > /dev/null; then
+print_test "Database 2 (${DB2_NAME}) exists"
+if $COMPOSE_CMD exec -T postgres psql -U postgres -lqt | cut -d \| -f 1 | grep -w "$DB2_NAME" > /dev/null; then
     pass
 else
-    fail "Database 'db2' not found"
+    fail "Database '$DB2_NAME' not found"
 fi
 
 # Test Database 3
-print_test "Database 3 (db3) exists"
-if docker-compose exec -T postgres psql -U postgres -lqt | cut -d \| -f 1 | grep -w db3 > /dev/null; then
+print_test "Database 3 (${DB3_NAME}) exists"
+if $COMPOSE_CMD exec -T postgres psql -U postgres -lqt | cut -d \| -f 1 | grep -w "$DB3_NAME" > /dev/null; then
     pass
 else
-    fail "Database 'db3' not found"
+    fail "Database '$DB3_NAME' not found"
 fi
 
 # ============================================================================
@@ -125,32 +142,32 @@ fi
 print_header "User Access Tests"
 
 # Test User 1 access to DB1
-print_test "User1 can access Database 1"
-if docker-compose exec -T postgres psql -U user1 -d db1 -c "SELECT 1" > /dev/null 2>&1; then
+print_test "User1 (${DB1_USER}) can access Database 1"
+if $COMPOSE_CMD exec -T postgres psql -U "$DB1_USER" -d "$DB1_NAME" -c "SELECT 1" > /dev/null 2>&1; then
     pass
 else
     fail "User1 cannot access db1"
 fi
 
 # Test User 1 CANNOT access DB2
-print_test "User1 CANNOT access Database 2 (isolation)"
-if docker-compose exec -T postgres psql -U user1 -d db2 -c "SELECT 1" > /dev/null 2>&1; then
-    fail "User1 should NOT be able to access db2 (isolation violation)"
+print_test "User1 (${DB1_USER}) CANNOT access Database 2 (isolation)"
+if $COMPOSE_CMD exec -T postgres psql -U "$DB1_USER" -d "$DB2_NAME" -c "SELECT 1" > /dev/null 2>&1; then
+    fail "User1 should NOT be able to access $DB2_NAME (isolation violation)"
 else
     pass
 fi
 
 # Test User 2 access to DB2
-print_test "User2 can access Database 2"
-if docker-compose exec -T postgres psql -U user2 -d db2 -c "SELECT 1" > /dev/null 2>&1; then
+print_test "User2 (${DB2_USER}) can access Database 2"
+if $COMPOSE_CMD exec -T postgres psql -U "$DB2_USER" -d "$DB2_NAME" -c "SELECT 1" > /dev/null 2>&1; then
     pass
 else
     fail "User2 cannot access db2"
 fi
 
 # Test User 3 access to DB3
-print_test "User3 can access Database 3"
-if docker-compose exec -T postgres psql -U user3 -d db3 -c "SELECT 1" > /dev/null 2>&1; then
+print_test "User3 (${DB3_USER}) can access Database 3"
+if $COMPOSE_CMD exec -T postgres psql -U "$DB3_USER" -d "$DB3_NAME" -c "SELECT 1" > /dev/null 2>&1; then
     pass
 else
     fail "User3 cannot access db3"
@@ -163,8 +180,8 @@ fi
 print_header "Sample Data Tests"
 
 # Check DB1 tables
-print_test "Database 1 - customers table"
-CUST_COUNT=$(docker-compose exec -T postgres psql -U user1 -d db1 -tc "SELECT COUNT(*) FROM customers;")
+print_test "Database 1 (${DB1_NAME}) - customers table"
+CUST_COUNT=$($COMPOSE_CMD exec -T postgres psql -U "$DB1_USER" -d "$DB1_NAME" -tc "SELECT COUNT(*) FROM customers;" 2>/dev/null || echo "0")
 if [[ $CUST_COUNT -gt 0 ]]; then
     pass
     echo "         (Found $CUST_COUNT customer records)"
@@ -172,8 +189,8 @@ else
     fail "customers table empty or missing"
 fi
 
-print_test "Database 1 - orders table"
-ORDER_COUNT=$(docker-compose exec -T postgres psql -U user1 -d db1 -tc "SELECT COUNT(*) FROM orders;")
+print_test "Database 1 (${DB1_NAME}) - orders table"
+ORDER_COUNT=$($COMPOSE_CMD exec -T postgres psql -U "$DB1_USER" -d "$DB1_NAME" -tc "SELECT COUNT(*) FROM orders;" 2>/dev/null || echo "0")
 if [[ $ORDER_COUNT -gt 0 ]]; then
     pass
     echo "         (Found $ORDER_COUNT order records)"
@@ -182,8 +199,8 @@ else
 fi
 
 # Check DB2 tables
-print_test "Database 2 - products table"
-PROD_COUNT=$(docker-compose exec -T postgres psql -U user2 -d db2 -tc "SELECT COUNT(*) FROM products;")
+print_test "Database 2 (${DB2_NAME}) - products table"
+PROD_COUNT=$($COMPOSE_CMD exec -T postgres psql -U "$DB2_USER" -d "$DB2_NAME" -tc "SELECT COUNT(*) FROM products;" 2>/dev/null || echo "0")
 if [[ $PROD_COUNT -gt 0 ]]; then
     pass
     echo "         (Found $PROD_COUNT product records)"
@@ -191,8 +208,8 @@ else
     fail "products table empty or missing"
 fi
 
-print_test "Database 2 - inventory_logs table"
-INV_COUNT=$(docker-compose exec -T postgres psql -U user2 -d db2 -tc "SELECT COUNT(*) FROM inventory_logs;")
+print_test "Database 2 (${DB2_NAME}) - inventory_logs table"
+INV_COUNT=$($COMPOSE_CMD exec -T postgres psql -U "$DB2_USER" -d "$DB2_NAME" -tc "SELECT COUNT(*) FROM inventory_logs;" 2>/dev/null || echo "0")
 if [[ $INV_COUNT -gt 0 ]]; then
     pass
     echo "         (Found $INV_COUNT inventory log records)"
@@ -201,8 +218,8 @@ else
 fi
 
 # Check DB3 tables
-print_test "Database 3 - departments table"
-DEPT_COUNT=$(docker-compose exec -T postgres psql -U user3 -d db3 -tc "SELECT COUNT(*) FROM departments;")
+print_test "Database 3 (${DB3_NAME}) - departments table"
+DEPT_COUNT=$($COMPOSE_CMD exec -T postgres psql -U "$DB3_USER" -d "$DB3_NAME" -tc "SELECT COUNT(*) FROM departments;" 2>/dev/null || echo "0")
 if [[ $DEPT_COUNT -gt 0 ]]; then
     pass
     echo "         (Found $DEPT_COUNT department records)"
@@ -210,8 +227,8 @@ else
     fail "departments table empty or missing"
 fi
 
-print_test "Database 3 - employees table"
-EMP_COUNT=$(docker-compose exec -T postgres psql -U user3 -d db3 -tc "SELECT COUNT(*) FROM employees;")
+print_test "Database 3 (${DB3_NAME}) - employees table"
+EMP_COUNT=$($COMPOSE_CMD exec -T postgres psql -U "$DB3_USER" -d "$DB3_NAME" -tc "SELECT COUNT(*) FROM employees;" 2>/dev/null || echo "0")
 if [[ $EMP_COUNT -gt 0 ]]; then
     pass
     echo "         (Found $EMP_COUNT employee records)"
@@ -248,20 +265,20 @@ fi
 print_header "Permission & Isolation Tests"
 
 # Test User 1 cannot drop database
-print_test "User1 cannot drop other databases"
-if docker-compose exec -T postgres psql -U user1 -d db1 -c "DROP DATABASE db2" 2>&1 | grep -q "permission denied"; then
+print_test "User1 (${DB1_USER}) cannot drop other databases"
+if $COMPOSE_CMD exec -T postgres psql -U "$DB1_USER" -d "$DB1_NAME" -c "DROP DATABASE $DB2_NAME" 2>&1 | grep -q "permission denied"; then
     pass
 else
     fail "User1 should not have permission to drop databases"
 fi
 
 # Test User 1 can create tables in their database
-print_test "User1 can create tables in Database 1"
-docker-compose exec -T postgres psql -U user1 -d db1 -c "CREATE TABLE IF NOT EXISTS test_table (id SERIAL PRIMARY KEY);" > /dev/null 2>&1
-if docker-compose exec -T postgres psql -U user1 -d db1 -c "SELECT 1 FROM test_table LIMIT 1" > /dev/null 2>&1; then
+print_test "User1 (${DB1_USER}) can create tables in Database 1"
+$COMPOSE_CMD exec -T postgres psql -U "$DB1_USER" -d "$DB1_NAME" -c "CREATE TABLE IF NOT EXISTS test_table (id SERIAL PRIMARY KEY);" > /dev/null 2>&1
+if $COMPOSE_CMD exec -T postgres psql -U "$DB1_USER" -d "$DB1_NAME" -c "SELECT 1 FROM test_table LIMIT 1" > /dev/null 2>&1; then
     pass
     # Clean up
-    docker-compose exec -T postgres psql -U user1 -d db1 -c "DROP TABLE test_table;" > /dev/null 2>&1
+    $COMPOSE_CMD exec -T postgres psql -U "$DB1_USER" -d "$DB1_NAME" -c "DROP TABLE test_table;" > /dev/null 2>&1
 else
     fail "User1 cannot create tables in db1"
 fi
@@ -285,8 +302,8 @@ if [ $FAILED -eq 0 ]; then
     echo -e "Ready to use:"
     echo -e "  • PostgreSQL:  localhost:5432"
     echo -e "  • pgAdmin:     http://localhost:5050"
-    echo -e "  • Databases:   db1, db2, db3"
-    echo -e "  • Users:       user1, user2, user3"
+    echo -e "  • Databases:   ${DB1_NAME}, ${DB2_NAME}, ${DB3_NAME}"
+    echo -e "  • Users:       ${DB1_USER}, ${DB2_USER}, ${DB3_USER}"
     echo ""
     
     exit 0

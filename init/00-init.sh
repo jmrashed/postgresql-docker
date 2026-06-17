@@ -24,7 +24,7 @@ required_vars=(
     "DB1_NAME" "DB1_USER" "DB1_PASSWORD"
     "DB2_NAME" "DB2_USER" "DB2_PASSWORD"
     "DB3_NAME" "DB3_USER" "DB3_PASSWORD"
-    "POSTGRES_USER"
+    "POSTGRES_USER" "POSTGRES_PASSWORD"
 )
 
 missing_vars=()
@@ -104,6 +104,30 @@ run_sql_in_db "$DB2_NAME" "/docker-entrypoint-initdb.d/20-db2-sample.sql"
 echo ""
 echo "Step 30: Loading sample data into Database 3..."
 run_sql_in_db "$DB3_NAME" "/docker-entrypoint-initdb.d/30-db3-sample.sql"
+
+# ============================================================================
+# Optional: Import custom SQL files
+# ============================================================================
+if [[ -d "/docker-entrypoint-initdb.d/custom" ]]; then
+    echo ""
+    echo "Importing custom SQL files..."
+    for custom_sql in /docker-entrypoint-initdb.d/custom/*.sql; do
+        if [[ -f "$custom_sql" ]]; then
+            filename=$(basename "$custom_sql")
+            # Skip placeholder/documentation files
+            if [[ "$filename" == "*.md" ]] || [[ "$filename" == PLACEHOLDER* ]]; then
+                continue
+            fi
+            echo "  - Importing: $filename"
+            for db in "$DB1_NAME" "$DB2_NAME" "$DB3_NAME"; do
+                if psql -v ON_ERROR_STOP=on -d "$db" -f "$custom_sql" 2>/dev/null; then
+                    echo "    ✓ Imported to $db"
+                    break
+                fi
+            done
+        fi
+    done
+fi
 
 # ============================================================================
 # Completion message

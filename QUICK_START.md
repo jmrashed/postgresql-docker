@@ -3,7 +3,11 @@
 ## 🚀 Getting Started (30 seconds)
 
 ```bash
-# 1. Copy environment template
+# One-command setup - generates random passwords, imports custom SQL, starts services
+./setup.sh
+
+# OR manually:
+# 1. Create environment file (optional - setup.sh does this automatically)
 cp .env.example .env
 
 # 2. Start all services
@@ -15,7 +19,7 @@ docker-compose logs postgres
 # 4. Access pgAdmin
 # Browser: http://localhost:5050
 # Email: admin@example.com
-# Password: admin123
+# Password: (shown in setup output or from .env)
 ```
 
 ## 📍 Service Addresses
@@ -25,20 +29,22 @@ docker-compose logs postgres
 | PostgreSQL | localhost:5432 | Database Server |
 | pgAdmin | http://localhost:5050 | Web UI |
 
-## 🔑 Default Credentials
+## 🔑 Credentials
+
+After running `./setup.sh`, credentials are printed to console and saved to `.env`:
 
 ### PostgreSQL
 ```
-Superuser:      postgres / K7mP2nL9rQ4vX8jB5hT0sW3cE6dF1gI
-CRM App:        crm_app / C9kR2nM7pL5vQ8jB3hX4sT0cW6dE1fG (Database: crm_db)
-Inventory App:  inventory_app / I4mP9qL2nO6vR3jB5hT8sW0cX7dE1fK (Database: inventory_db)
-HR App:         hr_app / H6rL1nE3pM9vK4jB7sT5cW0dX2fG8jQ (Database: hr_db)
+Superuser:      postgres / (randomly generated)
+DB1:          crm_app / (randomly generated)  (Database: crm_db)
+DB2:          inventory_app / (randomly generated)  (Database: inventory_db)
+DB3:          hr_app / (randomly generated)  (Database: hr_db)
 ```
 
 ### pgAdmin4
 ```
 Email:      admin@example.com
-Password:   P8gA2dM5nI9vL1rE4vX6sT0cQ3wK7bJ
+Password:   (randomly generated - shown in setup output)
 ```
 
 ## 💻 Common Commands
@@ -60,28 +66,28 @@ docker-compose logs -f postgres
 
 ### Connect to Database
 ```bash
-# Using psql directly
-psql -h localhost -U user1 -d db1
+# Using psql directly (replace with actual credentials from .env)
+psql -h localhost -U crm_app -d crm_db
 
 # Using Docker
-docker-compose exec postgres psql -U user1 -d db1
+docker-compose exec postgres psql -U crm_app -d crm_db
 ```
 
 ### Backup Database
 ```bash
-docker-compose exec postgres pg_dump -U user1 db1 > db1_backup.sql
+docker-compose exec postgres pg_dump -U crm_app crm_db > db1_backup.sql
 ```
 
 ### View Table Data
 ```bash
-docker-compose exec postgres psql -U user1 -d db1 << EOF
+docker-compose exec postgres psql -U crm_app -d crm_db << EOF
 SELECT * FROM customers;
 EOF
 ```
 
 ### List All Databases
 ```bash
-docker-compose exec postgres psql -U postgres -c "\l"
+docker-compose exec postgres psql -U postgres -c "\\l"
 ```
 
 ### Remove Everything (⚠️ Deletes Data)
@@ -93,19 +99,19 @@ docker-compose down -v
 
 ### DB1 (CRM)
 ```bash
-docker-compose exec postgres psql -U user1 -d db1 -c "\dt"
+docker-compose exec postgres psql -U crm_app -d crm_db -c "\\dt"
 # Shows: customers, orders
 ```
 
 ### DB2 (Inventory)
 ```bash
-docker-compose exec postgres psql -U user2 -d db2 -c "\dt"
+docker-compose exec postgres psql -U inventory_app -d inventory_db -c "\\dt"
 # Shows: products, inventory_logs
 ```
 
 ### DB3 (HR)
 ```bash
-docker-compose exec postgres psql -U user3 -d db3 -c "\dt"
+docker-compose exec postgres psql -U hr_app -d hr_db -c "\\dt"
 # Shows: employees, departments
 ```
 
@@ -119,9 +125,9 @@ docker-compose ps
 docker-compose exec postgres pg_isready
 
 # Can connect to each DB?
-docker-compose exec postgres psql -U user1 -d db1 -c "SELECT COUNT(*) FROM customers;"
-docker-compose exec postgres psql -U user2 -d db2 -c "SELECT COUNT(*) FROM products;"
-docker-compose exec postgres psql -U user3 -d db3 -c "SELECT COUNT(*) FROM employees;"
+docker-compose exec postgres psql -U crm_app -d crm_db -c "SELECT COUNT(*) FROM customers;"
+docker-compose exec postgres psql -U inventory_app -d inventory_db -c "SELECT COUNT(*) FROM products;"
+docker-compose exec postgres psql -U hr_app -d hr_db -c "SELECT COUNT(*) FROM employees;"
 ```
 
 ## 🛑 Troubleshooting
@@ -145,11 +151,10 @@ docker-compose ps
 
 **Can't See Tables?**
 ```bash
-# Verify you're in the correct database
-psql -U user1 -d db1 -c "\dt"
-
 # Check user permissions
-docker-compose exec postgres psql -U postgres -d db1 -c "\dp"
+```bash
+docker-compose exec postgres psql -U postgres -d crm_db -c "\\dp"
+```
 ```
 
 ## 📖 Full Documentation
