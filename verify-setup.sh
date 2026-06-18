@@ -266,7 +266,7 @@ print_header "Permission & Isolation Tests"
 
 # Test User 1 cannot drop database
 print_test "User1 (${DB1_USER}) cannot drop other databases"
-if $COMPOSE_CMD exec -T postgres psql -U "$DB1_USER" -d "$DB1_NAME" -c "DROP DATABASE $DB2_NAME" 2>&1 | grep -q "permission denied"; then
+if $COMPOSE_CMD exec -T postgres psql -U "$DB1_USER" -d "$DB1_NAME" -c "DROP DATABASE $DB2_NAME" 2>&1 | grep -qE "permission denied|must be owner"; then
     pass
 else
     fail "User1 should not have permission to drop databases"

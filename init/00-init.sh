@@ -128,7 +128,7 @@ echo "Permissions granted"
 echo ""
 echo "Step 10: Loading sample data into Database 1..."
 
-psql -d "$DB1_NAME" << 'SQLEOF'
+psql -d "$DB1_NAME" << SQLEOF
 CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -168,7 +168,9 @@ INSERT INTO orders (customer_id, amount, status) VALUES
     (3, 125.50, 'processing'),
     (1, 399.99, 'pending')
 ON CONFLICT DO NOTHING;
+SQLEOF
 
+psql -d "$DB1_NAME" -v ON_ERROR_STOP=on << EOF
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB1_USER;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB1_USER;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO $DB1_USER;
@@ -183,7 +185,7 @@ echo "Database 1 sample data loaded"
 echo ""
 echo "Step 20: Loading sample data into Database 2..."
 
-psql -d "$DB2_NAME" << 'SQLEOF'
+psql -d "$DB2_NAME" << SQLEOF
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -222,7 +224,9 @@ INSERT INTO inventory_logs (product_id, change_qty, reason, notes) VALUES
     (3, -2, 'sale', 'Sold to corporate'),
     (1, -3, 'damage', 'Damaged units')
 ON CONFLICT DO NOTHING;
+SQLEOF
 
+psql -d "$DB2_NAME" -v ON_ERROR_STOP=on << EOF
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB2_USER;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB2_USER;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO $DB2_USER;
@@ -237,7 +241,7 @@ echo "Database 2 sample data loaded"
 echo ""
 echo "Step 30: Loading sample data into Database 3..."
 
-psql -d "$DB3_NAME" << 'SQLEOF'
+psql -d "$DB3_NAME" << SQLEOF
 CREATE TABLE IF NOT EXISTS departments (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
@@ -255,8 +259,7 @@ CREATE TABLE IF NOT EXISTS employees (
     department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
     joined_date DATE NOT NULL,
     status VARCHAR(20) DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 INSERT INTO departments (name, description, budget) VALUES
@@ -272,7 +275,9 @@ INSERT INTO employees (name, email, role, salary, department_id, joined_date, st
     ('Bob Williams', 'bob.williams@company.com', 'Software Engineer', 95000.00, 1, '2021-03-20', 'active'),
     ('Diana Martinez', 'diana.martinez@company.com', 'Sales Manager', 105000.00, 2, '2020-09-01', 'active')
 ON CONFLICT (email) DO NOTHING;
+SQLEOF
 
+psql -d "$DB3_NAME" -v ON_ERROR_STOP=on << EOF
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB3_USER;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB3_USER;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO $DB3_USER;
